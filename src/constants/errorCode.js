@@ -47,5 +47,11 @@ export const ERROR_CODES = {
     code: 'INVALID_REQUEST_DATA',
     statusCode: StatusCodes.BAD_REQUEST,
     message: 'The request data is invalid.'
+  },
+
+  ACCOUNT_DISABLED: {
+    code: 'ACCOUNT_DISABLED',
+    statusCode: StatusCodes.FORBIDDEN,
+    message: 'The account has been disabled.'
   }
 }

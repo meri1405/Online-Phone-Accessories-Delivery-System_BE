@@ -3,7 +3,7 @@ import { VERIFY_TYPE } from '#constants/verificationConstant.js'
 
 const verificationSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     type: {
       type: String,
       enum: Object.values(VERIFY_TYPE),
@@ -12,9 +12,15 @@ const verificationSchema = new mongoose.Schema(
     code: { type: String, required: true },
     expiresAt: { type: Date, required: true },
     verifiedAt: { type: Date },
-    attempts: { type: Number, default: 0 }
+    attempts: { type: Number, default: 0 },
+    maxAttempt: { type: Number, default: 5 },
+    verified: { type: Boolean, default: false },
+    ipAddress: { type: String },
+    userAgent: { type: String }
   },
   { timestamps: true, versionKey: false }
 )
 
-export const VerificationModel = mongoose.model('verifications', verificationSchema)
+verificationSchema.index({ user: 1, type: 1, verified: 1 })
+
+export const verificationModel = mongoose.model('verifications', verificationSchema)

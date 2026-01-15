@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { env } from '#configs/environment.js'
+import { parseTokenTTL } from '#utils/parseTokenUtil.js'
 
 const generateAccessToken = (payload) => {
   return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN })
@@ -18,7 +19,15 @@ const verifyRefreshToken = (token) => {
   return jwt.verify(token, env.REFRESH_TOKEN_SECRET)
 }
 
-const generateToken = (accessPayload, refreshPayload = null) => {
+const parseRefreshToken = () => {
+  return parseTokenTTL(env.REFRESH_TOKEN_EXPIRES_IN)
+}
+
+const parseAccessToken = () => {
+  return parseTokenTTL(env.JWT_EXPIRES_IN)
+}
+
+const generateTokens = (accessPayload, refreshPayload = null) => {
   return {
     accessToken: generateAccessToken(accessPayload),
     refreshToken: generateRefreshToken(refreshPayload || accessPayload)
@@ -30,6 +39,8 @@ export const JWT_UTILS = {
   generateRefreshToken,
   verifyAccessToken,
   verifyRefreshToken,
-  generateToken
+  generateTokens,
+  parseAccessToken,
+  parseRefreshToken
 }
 
