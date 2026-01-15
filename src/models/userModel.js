@@ -23,10 +23,12 @@ const userSchema = new mongoose.Schema(
     isEmailVerified: { type: Boolean, default: false },
     emailVerifiedAt: { type: Date },
     avatar: { type: String },
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'users', default: null },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'users', default: null }
   }, { timestamps: true, versionKey: false }
 )
 
 userSchema.plugin(mongoosePaginate)
 
-export const UserModel = mongoose.model('users', userSchema)
+export const userModel = mongoose.model('users', userSchema)
