@@ -1,5 +1,15 @@
 import express from 'express'
 import { AUTH_CONTROLLER } from '#controllers/authController.js'
+import { createRateLimiter } from '#middlewares/rateLimitHandlingmiddleware.js'
+import { validationHandlingMiddleware } from '#middlewares/validationHandlingMiddleware.js'
+import { AUTH_VALIDATION } from '#validations/authValidation.js'
+import { sanitizeRequest } from '#middlewares/sanitizeRequestMiddleware.js'
+import {
+  REGISTER_FIELDS,
+  LOGIN_FIELDS,
+  REQUIRE_FIELD
+} from '#constants/userConstant.js'
+import { verifyRecaptchaMiddleware } from '#middlewares/verifyCaptchaMiddleware.js'
 
 const router = express.Router()
 
@@ -8,7 +18,7 @@ const router = express.Router()
  * /api/auth/register:
  *   post:
  *     summary: Register a new user
- *     description: Register a new account. Two-factor authentication is disabled by default.
+ *     description: Register a new account.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -23,6 +33,7 @@ const router = express.Router()
  *               - phone
  *               - address
  *               - avatar
+ *               - captchaToken
  *             properties:
  *               fullname:
  *                 type: string
@@ -60,10 +71,59 @@ const router = express.Router()
  *                 type: string
  *                 format: url
  *                 example: 'http://example.com/avatar.jpg'
+ *               captchaToken:
+ *                 type: string
+ *                 example: '03AGdBq24...'
  *     responses:
  *       201:
  *         description: Register successfully
  *       409:
  *         description: Email already exists
  */
-router.post('/register', AUTH_CONTROLLER.register)
+router.post('/register',
+  createRateLimiter,
+  verifyRecaptchaMiddleware,
+  validationHandlingMiddleware(AUTH_VALIDATION.registerUser),
+  sanitizeRequest(REGISTER_FIELDS, REQUIRE_FIELD),
+  AUTH_CONTROLLER.register
+)
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login with email and password
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - captchaToken
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: ngan@gmail.com
+ *               password:
+ *                 type: string
+ *                 example: Password@123
+ *               captchaToken:
+ *                 type: string
+ *                 example: '03AGdBq24...'
+ *     responses:
+ *       200:
+ *         description: Login success
+ */
+router.post('/login',
+  createRateLimiter,
+  verifyRecaptchaMiddleware,
+  validationHandlingMiddleware(AUTH_VALIDATION.loginUser),
+  sanitizeRequest(LOGIN_FIELDS, LOGIN_FIELDS),
+  AUTH_CONTROLLER.login
+)
+
+export const AUTH_ROUTE = router

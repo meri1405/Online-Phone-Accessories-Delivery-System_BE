@@ -1,5 +1,5 @@
 import { JWT_UTILS } from '#utils/jwtUtil.js'
-import { TOKEN_REPOSITORY } from '#repositories/tokenRepository.js'
+import { REFRESHTOKEN_REPOSITORY } from '#repositories/refreshTokenRepository.js'
 const buildTokenPayload = (user) => {
   return {
     id: user._id.toString(),
@@ -18,7 +18,7 @@ const createToken = async (user, ipAddress = '', userAgent = '') => {
   const refreshTokenExpires = JWT_UTILS.parseRefreshToken()
   const expiresAt = new Date(Date.now() + refreshTokenExpires)
 
-  await TOKEN_REPOSITORY.createRefreshToken({
+  await REFRESHTOKEN_REPOSITORY.createRefreshToken({
     user: user._id,
     token: refreshToken,
     ipAddress,

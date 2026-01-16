@@ -18,6 +18,21 @@ const register = async (req, res, next) => {
     next(error)
   }
 }
+
+const login = async (req, res, next) => {
+  try {
+    const result = await AUTH_SERVICE.loginUser(req.body, {
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.headers['user-agent'] || ''
+    })
+    res.status(StatusCodes.OK).json(responseSuccess({
+      data: result,
+      message: 'Đăng nhập thành công'
+    }))
+  } catch (error) { next(error) }
+}
+
 export const AUTH_CONTROLLER = {
-  register
+  register,
+  login
 }

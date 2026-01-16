@@ -6,6 +6,8 @@ import { VERIFY_TYPE } from '#constants/verificationConstant.js'
 import { VERIFICATION_REPOSITORY } from '#repositories/verificationRepository.js'
 import { GENERATE_UTILS } from '#utils/generateUtil.js'
 import { EMAIL_SERVICE } from '#services/emailService.js'
+import { BCRYPT_UTILS } from '#utils/bcryptUtil.js'
+import { TOKEN_SERVICE } from '#services/tokenService.js'
 
 const registerUser = async (userData, requestInfo = {}) => {
   const { ipAddress = '', userAgent = '' } = requestInfo
@@ -38,6 +40,44 @@ const registerUser = async (userData, requestInfo = {}) => {
   }
 }
 
+const loginUser = async (data, requestInfo = {}) => {
+  const { email, password } = data
+  const { ipAddress = '', userAgent = '' } = requestInfo
+
+  const user = await USER_REPOSITORY.getUserByEmail(email, { includePassword: true })
+  if (!user) {
+    throw new ApiError(ERROR_CODES.BAD_REQUEST, [
+      'Email hoặc mật khẩu không chính xác'
+    ])
+  }
+
+  if (!user.isActive) {
+    throw new ApiError(ERROR_CODES.ACCOUNT_DISABLED, [
+      'Tài khoản của bạn đã bị vô hiệu hóa'
+    ])
+  }
+
+  if (!user.isEmailVerified) {
+    throw new ApiError(ERROR_CODES.EMAIL_NOT_VERIFIED, [
+      'Vui lòng xác nhận email trước khi đăng nhập'
+    ])
+  }
+
+  const isPasswordValid = await BCRYPT_UTILS.comparePassword(password, user.password)
+  if (!isPasswordValid) {
+    throw new ApiError(ERROR_CODES.BAD_REQUEST, [
+      'Email hoặc mật khẩu không chính xác'
+    ])
+  }
+
+  const tokens = await TOKEN_SERVICE.createToken(user, ipAddress, userAgent)
+
+  return {
+    ...tokens
+  }
+}
+
 export const AUTH_SERVICE = {
-  registerUser
+  registerUser,
+  loginUser
 }
