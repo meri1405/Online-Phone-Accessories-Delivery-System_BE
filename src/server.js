@@ -47,9 +47,9 @@ app.use(errorHandlingMiddleware)
 
 // Start the server
 const START_SERVER = () => {
-  app.listen(env.PORT, env.HOSTNAME, () => {
+  app.listen(env.APP_PORT, '0.0.0.0', () => {
     // eslint-disable-next-line no-console
-    console.log(`Server running at http://${env.HOSTNAME}:${env.PORT}/`)
+    console.log(`Server in ${env.NODE_ENV} environment is running at ${env.PORT}`)
   })
   // implement scheduled tasks here if needed
 
