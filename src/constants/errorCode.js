@@ -53,5 +53,11 @@ export const ERROR_CODES = {
     code: 'ACCOUNT_DISABLED',
     statusCode: StatusCodes.FORBIDDEN,
     message: 'The account has been disabled.'
+  },
+
+  EMAIL_NOT_VERIFIED: {
+    code: 'EMAIL_NOT_VERIFIED',
+    statusCode: StatusCodes.FORBIDDEN,
+    message: 'Email address has not been verified.'
   }
 }
