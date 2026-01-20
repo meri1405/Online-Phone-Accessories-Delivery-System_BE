@@ -11,6 +11,7 @@ import swaggerUi from 'swagger-ui-express'
 import { swaggerHandlingMiddleware } from '#middlewares/swaggerHandlingMiddleware.js'
 import { swaggerSpec } from '#configs/swagger.js'
 import { initializeDefaultValue } from '#providers/dataInitial.js'
+import auditLogMiddleware from '#middlewares/auditLogMiddleware.js'
 import compression from 'compression'
 
 const app = express()
@@ -19,7 +20,10 @@ app.use(express.json())
 
 app.use(cors(corsOptions))
 
-// compress request bodies
+// Audit log middleware
+app.use(auditLogMiddleware)
+
+// compression middleware to gzip responses
 app.use(
   compression({
     level: 6,
