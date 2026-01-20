@@ -36,8 +36,9 @@ export const validationHandlingMiddleware = (schema) => {
       if (validationErrors.length > 0) {
         throw new ApiError(ERROR_CODES.VALIDATION_ERROR, validationErrors)
       }
-
       next()
-    } catch (error) { next(error) }
+    } catch (error) {
+      next(error)
+    }
   }
 }
