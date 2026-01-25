@@ -179,6 +179,7 @@ const buildGoogleAuthRedirectUrl = (result, res) => {
   const redirectUrl = new URL(`${clientUrl}/auth/callback`)
 
   const isProd = env.NODE_ENV === 'prod'
+
   if (!isProd) {
     redirectUrl.searchParams.set('refreshToken', result.refreshToken)
   } else {
@@ -186,7 +187,6 @@ const buildGoogleAuthRedirectUrl = (result, res) => {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
-      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000
     })
   }
