@@ -2,7 +2,6 @@ import express from 'express'
 import { USER_CONTROLLER } from '#controllers/userController.js'
 import { authorizationMiddleware } from '#middlewares/authHandlingMiddleware.js'
 import {
-  QUERY_FIELDS,
   CREATE_USER_FIELDS,
   REQUIRE_FIELD_CREATE_USER,
   UPDATE_CURRENT_USER_FIELDS
@@ -10,7 +9,7 @@ import {
 import { RoleEnum } from '#constants/roleConstant.js'
 import { requireRoles } from '#middlewares/policiesHandlingMiddleware.js'
 import { sanitizeRequest } from '#middlewares/sanitizeRequestMiddleware.js'
-import { apiRateLimiter, createRateLimiter, writeRateLimiter } from '#middlewares/rateLimitHandlingmiddleware.js'
+import { apiRateLimiter, writeRateLimiter } from '#middlewares/rateLimitHandlingmiddleware.js'
 import { USER_VALIDATION } from '#validations/userValidation.js'
 import { validationHandlingMiddleware } from '#middlewares/validationHandlingMiddleware.js'
 
@@ -73,7 +72,6 @@ router.use(authorizationMiddleware)
 router.get('/',
   apiRateLimiter,
   requireRoles(RoleEnum.ADMIN),
-  sanitizeRequest(QUERY_FIELDS, ['page', 'limit']),
   validationHandlingMiddleware({ query: USER_VALIDATION.query }),
   USER_CONTROLLER.getAllUsers
 )
@@ -97,6 +95,7 @@ router.get('/',
  *               - fullname
  *               - email
  *               - password
+ *               - role
  *             properties:
  *               fullname:
  *                 type: string
@@ -111,6 +110,10 @@ router.get('/',
  *               phone:
  *                 type: string
  *                 example: '0123456789'
+ *               role:
+ *                type: string
+ *                enum: [admin, manager, staff, customer]
+ *                example: customer
  *               branch:
  *                 type: string
  *                 example: '60d0fe4f5311236168a109ca'
@@ -150,7 +153,7 @@ router.get('/',
  *         description: Created successfully
  */
 router.post('/',
-  createRateLimiter,
+  apiRateLimiter,
   requireRoles(RoleEnum.ADMIN, RoleEnum.MANAGER, RoleEnum.STAFF),
   sanitizeRequest(CREATE_USER_FIELDS, REQUIRE_FIELD_CREATE_USER),
   validationHandlingMiddleware({ body: USER_VALIDATION.createUser }),
@@ -211,7 +214,6 @@ router.post('/',
 router.get('/manager',
   apiRateLimiter,
   requireRoles(RoleEnum.MANAGER),
-  sanitizeRequest(QUERY_FIELDS, ['page', 'limit']),
   validationHandlingMiddleware({ query: USER_VALIDATION.query }),
   USER_CONTROLLER.getAllUsersForManager
 )
