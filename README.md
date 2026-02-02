@@ -168,7 +168,7 @@ Once the server is running, access the Swagger API documentation at:
 | `RECAPTCHA_SITE_KEY` | string | Yes | - | Site key for recaptcha |
 | `OTP_EXPIRES_IN` | string | No | `5m` | OTP expires time for verify code |
 | `VERIFY_CAPTCHA_URL` | string | Yes | - | URL to verify captcha |
-| `AUTHOR` | string | No | `SWD392` | Author |
+| `AUTHOR` | string | No | `SDN302` | Author |
 
 ## Key Features Explained
 

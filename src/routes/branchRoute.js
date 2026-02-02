@@ -9,7 +9,6 @@ import {
   CREATE_BRANCH_FIELDS,
   CREATE_BRANCH_REQUIRED,
   ASSIGN_BRANCH_MANAGER_FIELDS,
-  QUERY_BRANCH_FIELDS,
   UPDATE_BRANCH_FIELDS,
   UPDATE_BRANCH_STATUS
 } from '#constants/branchConstant.js'
@@ -211,13 +210,12 @@ router.post(
   requireRoles(RoleEnum.ADMIN),
   sanitizeRequest(CREATE_BRANCH_FIELDS, CREATE_BRANCH_REQUIRED),
   validationHandlingMiddleware({ body: BRANCH_VALIDATION.createBranch }),
-  BRANCH_CONTROLLER.getAllBranches
+  BRANCH_CONTROLLER.createBranch
 )
 
 router.get(
   '/',
   apiRateLimiter,
-  sanitizeRequest(QUERY_BRANCH_FIELDS, ['page', 'limit']),
   validationHandlingMiddleware({ query: BRANCH_VALIDATION.query }),
   BRANCH_CONTROLLER.getAllBranches
 )
