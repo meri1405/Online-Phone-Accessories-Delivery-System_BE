@@ -9,6 +9,20 @@ export const PRODUCT_VALIDATION = {
       'any.required': 'ID là bắt buộc'
     }).trim()
   }),
+  slugParam: joi.object({
+    slug: joi.string().required().messages({
+      'string.empty': 'Slug không được để trống',
+      'any.required': 'Slug là bắt buộc'
+    }).trim()
+  }),
+  deviceIdParam: joi.object({
+    deviceId: joi.string().hex().length(24).required().messages({
+      'string.empty': 'Device ID không được để trống',
+      'string.hex': 'Device ID không hợp lệ',
+      'string.length': 'Device ID không hợp lệ',
+      'any.required': 'Device ID là bắt buộc'
+    }).trim()
+  }),
   createProduct: joi.object({
     name: joi.string().required().max(200).messages({
       'string.empty': 'Tên sản phẩm không được để trống',
@@ -28,8 +42,8 @@ export const PRODUCT_VALIDATION = {
       'any.required': 'Giá sản phẩm là bắt buộc'
     }),
     images: joi.array().items(
-      joi.string().uri().messages({
-        'string.uri': 'Ảnh sản phẩm phải là URL hợp lệ'
+      joi.string().trim().messages({
+        'string.base': 'ID ảnh sản phẩm phải là chuỗi'
       })
     ).default([]),
     material: joi.string().optional().allow('').trim(),
@@ -55,8 +69,8 @@ export const PRODUCT_VALIDATION = {
       'number.positive': 'Giá sản phẩm phải lớn hơn 0'
     }),
     images: joi.array().items(
-      joi.string().uri().messages({
-        'string.uri': 'Ảnh sản phẩm phải là URL hợp lệ'
+      joi.string().trim().messages({
+        'string.base': 'ID ảnh sản phẩm phải là chuỗi'
       })
     ),
     material: joi.string().optional().allow('').trim(),
