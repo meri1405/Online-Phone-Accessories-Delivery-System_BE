@@ -59,7 +59,9 @@ const assertValidManager = async (managerId) => {
 }
 
 const createBranch = async (data, createdBy = null) => {
-  const { manager } = data
+  let { manager } = data
+  manager = manager || null
+
   if (manager) {
     await assertValidManager(manager)
     const existingBranch = await BRANCH_REPOSITORY.getAllBranches({ manager })
@@ -69,7 +71,7 @@ const createBranch = async (data, createdBy = null) => {
   }
 
   await assertBranchNameUnique(data.name)
-  const branch = await BRANCH_REPOSITORY.createBranch({ ...data, createdBy })
+  const branch = await BRANCH_REPOSITORY.createBranch({ ...data, manager, createdBy })
 
   if (manager) {
     await USER_REPOSITORY.updateUserById(manager, { branch: branch._id })
@@ -80,7 +82,9 @@ const createBranch = async (data, createdBy = null) => {
 const updateBranch = async (branchId, data, updatedBy = null) => {
   const branch = await getBranchById(branchId)
 
-  const { name, address, manager } = data
+  let { name, address, manager } = data
+  manager = manager || null
+
   const updatedBranchData = {}
 
   if (name && name !== branch.name) {
@@ -97,6 +101,11 @@ const updateBranch = async (branchId, data, updatedBy = null) => {
       await USER_REPOSITORY.updateUserById(branch.manager, { branch: null })
     }
     updatedBranchData.manager = manager
+  } else if (manager === null && branch.manager) {
+    if (branch.manager) {
+      await USER_REPOSITORY.updateUserById(branch.manager, { branch: null })
+    }
+    updatedBranchData.manager = null
   }
   if (address && address !== branch.address) {
     updatedBranchData.address = address
@@ -138,6 +147,37 @@ const removeManagerFromBranch = async (branchId, updatedBy = null) => {
   return BRANCH_REPOSITORY.updateBranchById(branchId, { manager: null, updatedBy })
 }
 
+const deleteBranch = async (branchId, updatedBy = null) => {
+  const branch = await getBranchById(branchId)
+  if (branch.manager) {
+    await USER_REPOSITORY.updateUserById(branch.manager, { branch: null })
+  }
+  return BRANCH_REPOSITORY.updateBranchById(branchId, { isDeleted: true, updatedBy })
+}
+
+const getAllManagerForBranch = async (query = {}) => {
+  const { page, limit, search, sortBy, sortOrder } = query
+  const filter = { role: RoleEnum.MANAGER, branch: { $exists: false } }
+  if (search) {
+    const escapedSearch = escapeRegex(search)
+    filter.$or = [
+      { name: { $regex: escapedSearch, $options: 'i' } },
+      { email: { $regex: escapedSearch, $options: 'i' } }
+    ]
+  }
+  const sort = { [sortBy || 'createdAt']: sortOrder === 'asc' ? 1 : -1 }
+
+  const result = await USER_REPOSITORY.getAllUsers(filter, {
+    page,
+    limit,
+    sort
+  })
+  return {
+    data: result.docs,
+    pagination: mapMongoosePagination(result)
+  }
+}
+
 export const BRANCH_SERVICE = {
   getBranchById,
   getAllBranches,
@@ -145,5 +185,7 @@ export const BRANCH_SERVICE = {
   updateBranch,
   assignManagerToBranch,
   updateBranchStatus,
-  removeManagerFromBranch
+  removeManagerFromBranch,
+  deleteBranch,
+  getAllManagerForBranch
 }
