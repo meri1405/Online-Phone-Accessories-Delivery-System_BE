@@ -4,7 +4,7 @@ import { responseSuccess } from '#utils/responseUtil.js'
 
 const getProductById = async (req, res, next) => {
   try {
-    const result = await PRODUCT_SERVICE.getProductById(req.params.id)
+    const result = await PRODUCT_SERVICE.getProductByIdWithImages(req.params.id)
     res.status(StatusCodes.OK).json(responseSuccess({
       data: result,
       message: 'Lấy thông tin sản phẩm thành công'
@@ -120,7 +120,7 @@ const getProductsByDevice = async (req, res, next) => {
 
 const getFeaturedProducts = async (req, res, next) => {
   try {
-    const result = await PRODUCT_SERVICE.getFeaturedProducts(req.validated.query)
+    const result = await PRODUCT_SERVICE.getFeaturedProducts(req.validated?.query ?? req.query ?? {})
     res.status(StatusCodes.OK).json(responseSuccess({
       data: result,
       message: 'Lấy sản phẩm nổi bật thành công'
@@ -130,7 +130,7 @@ const getFeaturedProducts = async (req, res, next) => {
 
 const getNewArrivals = async (req, res, next) => {
   try {
-    const result = await PRODUCT_SERVICE.getNewArrivals(req.validated.query)
+    const result = await PRODUCT_SERVICE.getNewArrivals(req.validated?.query ?? req.query ?? {})
     res.status(StatusCodes.OK).json(responseSuccess({
       data: result,
       message: 'Lấy sản phẩm mới thành công'
