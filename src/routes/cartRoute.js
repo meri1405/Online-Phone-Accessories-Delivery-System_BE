@@ -6,16 +6,16 @@ import { CART_VALIDATION } from '#validations/cartValidation.js'
 import { sanitizeRequest } from '#middlewares/sanitizeRequestMiddleware.js'
 import { CART_CONSTANT } from '#constants/cartConstant.js'
 import { RoleEnum } from '#constants/roleConstant.js'
-import { apiRateLimiter } from '#middlewares/rateLimitHandlingMiddleware.js'
+import { apiRateLimiter } from '#middlewares/rateLimitHandlingmiddleware.js'
 import { requireRoles } from '#middlewares/policiesHandlingMiddleware.js'
 
 const router = express.Router()
 router.use(authorizationMiddleware)
 /**
  * @swagger
- * /api/v1/carts:
+ * /api/carts:
  *   get:
- *     summary: Get user's cart (customer only)
+ *     summary: Get user's cart
  *     description: Get current user's shopping cart with all items
  *     tags: [Cart]
  *     security:
@@ -34,9 +34,9 @@ router.get(
 )
 /**
  * @swagger
- * /api/v1/carts:
+ * /api/carts:
  *   post:
- *     summary: Add product to cart (customer only)
+ *     summary: Add product to cart
  *     description: Add a product with optional services to cart
  *     tags: [Cart]
  *     security:
@@ -78,15 +78,15 @@ router.post(
   apiRateLimiter,
   requireRoles(RoleEnum.CUSTOMER),
   sanitizeRequest(CART_CONSTANT.ADD_TO_CART_FIELDS, CART_CONSTANT.ADD_TO_CART_REQUIRED_FIELDS),
-  validationHandlingMiddleware({ body: CART_VALIDATION.addToCart }),
+  validationHandlingMiddleware(CART_VALIDATION.addToCart),
   CART_CONTROLLER.addToCart
 )
 
 /**
  * @swagger
- * /api/v1/carts/clear:
+ * /api/carts/clear:
  *   delete:
- *     summary: Clear entire cart (customer only)
+ *     summary: Clear entire cart
  *     description: Remove all items from cart
  *     tags: [Cart]
  *     security:
@@ -104,7 +104,7 @@ router.delete(
 
 /**
  * @swagger
- * /api/v1/carts/validate-before-checkout:
+ * /api/carts/validate-before-checkout:
  *   post:
  *     summary: Validate cart before checkout
  *     description: Validate cart items availability and prices
@@ -120,14 +120,15 @@ router.delete(
 router.post(
   '/validate-before-checkout',
   apiRateLimiter,
+  requireRoles(RoleEnum.CUSTOMER),
   CART_CONTROLLER.validateCart
 )
 
 /**
  * @swagger
- * /api/v1/carts/item:
+ * /api/carts/item:
  *   delete:
- *     summary: Remove item from cart (customer only)
+ *     summary: Remove item from cart
  *     description: Remove a product from cart
  *     tags: [Cart]
  *     security:
@@ -152,15 +153,15 @@ router.delete(
   apiRateLimiter,
   requireRoles(RoleEnum.CUSTOMER),
   sanitizeRequest(CART_CONSTANT.REMOVE_CART_ITEM_FIELDS, CART_CONSTANT.REMOVE_CART_ITEM_FIELDS),
-  validationHandlingMiddleware({ body: CART_VALIDATION.removeCartItem }),
+  validationHandlingMiddleware(CART_VALIDATION.removeCartItem),
   CART_CONTROLLER.removeCartItem
 )
 
 /**
  * @swagger
- * /api/v1/carts/item/quantity:
+ * /api/carts/item/quantity:
  *   put:
- *     summary: Update cart item quantity (customer only)
+ *     summary: Update cart item quantity
  *     description: Update quantity of a product in cart
  *     tags: [Cart]
  *     security:
@@ -188,15 +189,15 @@ router.put(
   apiRateLimiter,
   requireRoles(RoleEnum.CUSTOMER),
   sanitizeRequest(CART_CONSTANT.UPDATE_CART_ITEM_FIELDS, CART_CONSTANT.UPDATE_CART_ITEM_FIELDS),
-  validationHandlingMiddleware({ body: CART_VALIDATION.updateCartItem }),
+  validationHandlingMiddleware(CART_VALIDATION.updateCartItem),
   CART_CONTROLLER.updateCartItemQuantity
 )
 
 /**
  * @swagger
- * /api/v1/carts/item/services:
+ * /api/carts/item/services:
  *   put:
- *     summary: Update cart item services (customer only)
+ *     summary: Update cart item services
  *     description: Update services for a product in cart
  *     tags: [Cart]
  *     security:
@@ -229,7 +230,7 @@ router.put(
   apiRateLimiter,
   requireRoles(RoleEnum.CUSTOMER),
   sanitizeRequest(CART_CONSTANT.UPDATE_CART_SERVICES_FIELDS, CART_CONSTANT.UPDATE_CART_SERVICES_FIELDS),
-  validationHandlingMiddleware({ body: CART_VALIDATION.updateCartItem }),
+  validationHandlingMiddleware(CART_VALIDATION.updateCartServices),
   CART_CONTROLLER.updateCartItemServices
 )
 
