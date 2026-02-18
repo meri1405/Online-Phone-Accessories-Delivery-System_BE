@@ -35,6 +35,23 @@ const getAllCategories = async (query = {}) => {
   }
 }
 
+const getAllCategoriesWithoutPagination = async (query = {}) => {
+  const { search, isActive, sortBy, sortOrder } = query
+  const filter = {}
+  if (search) {
+    const escapedSearch = escapeRegex(search)
+    filter.$or = [
+      { name: { $regex: escapedSearch, $options: 'i' } }
+    ]
+  }
+  if (typeof isActive === 'boolean') {
+    filter.isActive = isActive
+  }
+  const sort = { [sortBy || 'createdAt']: sortOrder === 'asc' ? 1 : -1 }
+
+  return await CATEGORY_REPOSITORY.getAllCategoriesWithoutPagination(filter, sort)
+}
+
 const assertCategoryNameUnique = async (name) => {
   const existingCategory = await CATEGORY_REPOSITORY.getCategoryByName(name)
   if (existingCategory) {
@@ -65,8 +82,8 @@ const updateCategoryById = async (categoryId, data, updatedBy = null) => {
 
 const deleteCategoryById = async (categoryId) => {
   const category = await getCategoryById(categoryId)
-  if (!category.isActive)
-    throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chỉ có thể xóa danh mục đang hoạt động'])
+  if (category.isActive)
+    throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chỉ có thể xóa danh mục không hoạt động'])
   if (category.isDeleted)
     throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Danh mục đã bị xóa'])
   return CATEGORY_REPOSITORY.deleteCategoryById(categoryId)
@@ -86,5 +103,6 @@ export const CATEGORY_SERVICE = {
   updateCategoryById,
   deleteCategoryById,
   updateCategoryStatus,
-  getAllCategories
+  getAllCategories,
+  getAllCategoriesWithoutPagination
 }
