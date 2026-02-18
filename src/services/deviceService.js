@@ -65,7 +65,7 @@ const updateDeviceStatus = async (deviceId, isActive, updatedBy = null) => {
 const deleteDevice = async (deviceId) => {
   const device = await DEVICE_REPOSITORY.getDeviceById(deviceId)
   if (!device) throw new ApiError(ERROR_CODES.NOT_FOUND, ['Thiết bị không tồn tại'])
-  if (!device.isActive) throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chỉ có thể xoá thiết bị đang hoạt động'])
+  if (device.isActive) throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chỉ có thể xoá thiết bị không hoạt động'])
   if (device.isDeleted) throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Thiết bị đã bị xoá'])
   return DEVICE_REPOSITORY.deleteDeviceById(deviceId)
 }
@@ -97,11 +97,31 @@ const getAllDevices = async (query = {}) => {
   }
 }
 
+const getAllDevicesWithoutPagination = async (query = {}) => {
+  const { search, isActive, sortBy, sortOrder } = query
+  const filter = {}
+  if (search) {
+    const escapedSearch = escapeRegex(search)
+    filter.$or = [
+      { name: { $regex: escapedSearch, $options: 'i' } },
+      { brand: { $regex: escapedSearch, $options: 'i' } },
+      { model: { $regex: escapedSearch, $options: 'i' } }
+    ]
+  }
+  if (typeof isActive === 'boolean') {
+    filter.isActive = isActive
+  }
+  const sort = { [sortBy || 'createdAt']: sortOrder === 'asc' ? 1 : -1 }
+
+  return await DEVICE_REPOSITORY.getAllDevicesWithoutPagination(filter, sort)
+}
+
 export const DEVICE_SERVICE = {
   getDeviceById,
   createDevice,
   updateDevice,
   updateDeviceStatus,
   deleteDevice,
-  getAllDevices
+  getAllDevices,
+  getAllDevicesWithoutPagination
 }

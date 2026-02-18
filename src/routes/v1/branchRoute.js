@@ -70,17 +70,9 @@ const router = express.Router()
  *   get:
  *     summary: Lấy danh sách quản lý chi nhánh (admin only)
  *     tags: [Branch]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Trang hiện tại
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Số lượng mỗi trang
  *       - in: query
  *         name: search
  *         schema:
@@ -104,6 +96,8 @@ const router = express.Router()
  *   get:
  *     summary: Lấy thông tin chi nhánh theo ID (admin, manager, staff only)
  *     tags: [Branch]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -270,8 +264,16 @@ router.get(
 )
 
 router.get(
+  '/all',
+  apiRateLimiter,
+  validationHandlingMiddleware({ query: BRANCH_VALIDATION.queryNoPagination }),
+  BRANCH_CONTROLLER.getAllBranchesWithoutPagination
+)
+
+router.get(
   '/managers',
   apiRateLimiter,
+  authorizationMiddleware,
   requireRoles(RoleEnum.ADMIN),
   validationHandlingMiddleware({ query: BRANCH_VALIDATION.getAllManagerForBranch }),
   BRANCH_CONTROLLER.getAllManagerForBranch
@@ -280,6 +282,7 @@ router.get(
 router.get(
   '/:id',
   apiRateLimiter,
+  authorizationMiddleware,
   requireRoles(RoleEnum.ADMIN, RoleEnum.MANAGER, RoleEnum.STAFF),
   validationHandlingMiddleware({ params: BRANCH_VALIDATION.idParam }),
   BRANCH_CONTROLLER.getBranchById
