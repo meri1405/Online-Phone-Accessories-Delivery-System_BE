@@ -212,7 +212,7 @@ const router = express.Router()
  *           type: string
  *         type:
  *           type: string
- *           enum: [smartphone, tablet, laptop]
+ *           enum: [smartphone, tablet]
  *         brand:
  *           type: string
  *         model:
@@ -224,7 +224,7 @@ const router = express.Router()
  *           type: string
  *         type:
  *           type: string
- *           enum: [smartphone, tablet, laptop]
+ *           enum: [smartphone, tablet]
  *         brand:
  *           type: string
  *         model:
