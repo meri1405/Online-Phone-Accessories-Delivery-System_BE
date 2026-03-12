@@ -28,7 +28,9 @@ const getImage = async (publicId) => {
   }
 
   try {
-    const resource = await cloudinary.api.resource(publicId, { resource_type: 'image' })
+    // If publicId has no folder separator, prepend 'uploads/' for backward compatibility
+    const fullPublicId = publicId.includes('/') ? publicId : `uploads/${publicId}`
+    const resource = await cloudinary.api.resource(fullPublicId, { resource_type: 'image' })
     return {
       imageUrl: resource.secure_url,
       publicId: resource.public_id,
@@ -74,7 +76,9 @@ const deleteImage = async (publicId) => {
   }
 
   try {
-    const result = await cloudinary.uploader.destroy(publicId, { invalidate: true })
+    // If publicId has no folder separator, prepend 'uploads/' for backward compatibility
+    const fullPublicId = publicId.includes('/') ? publicId : `uploads/${publicId}`
+    const result = await cloudinary.uploader.destroy(fullPublicId, { invalidate: true })
     if (['ok', 'not found'].includes(result.result)) {
       return true
     }
@@ -85,10 +89,34 @@ const deleteImage = async (publicId) => {
   throw new ApiError(ERROR_CODES.SERVER_ERROR, ['Xóa ảnh không thành công'])
 }
 
+const deleteImagesFromCloudinary = async (images) => {
+  if (!images || images.length === 0) {
+    return { deletedCount: 0, failedCount: 0 }
+  }
+
+  const publicIds = images.map(img =>
+    typeof img === 'string' ? img : img.publicId
+  ).filter(Boolean)
+
+  if (publicIds.length === 0) {
+    return { deletedCount: 0, failedCount: 0 }
+  }
+
+  const results = await Promise.allSettled(
+    publicIds.map(publicId => deleteImage(publicId))
+  )
+
+  const deletedCount = results.filter(r => r.status === 'fulfilled').length
+  const failedCount = results.filter(r => r.status === 'rejected').length
+
+  return { deletedCount, failedCount }
+}
+
 export const UPLOAD_SERVICE = {
   uploadImage,
   uploadMultipleImages,
   getImage,
-  deleteImage
+  deleteImage,
+  deleteImagesFromCloudinary
 }
 

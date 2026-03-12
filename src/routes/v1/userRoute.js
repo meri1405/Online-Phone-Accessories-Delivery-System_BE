@@ -85,7 +85,7 @@ router.get('/',
  * /api/v1/users:
  *   post:
  *     summary: Create a new user (admin, manager, staff)
- *     description: Create a new user.
+ *     description: Create a new user. Avatar should be a Cloudinary publicId obtained from the upload image API.
  *     tags: [User]
  *     security:
  *       - BearerAuth: []
@@ -150,8 +150,8 @@ router.get('/',
  *                     isDefault: true
  *               avatar:
  *                 type: string
- *                 format: url
- *                 example: 'http://example.com/avatar.jpg'
+ *                 description: Cloudinary public ID obtained from upload image API
+ *                 example: 'uploads/a1b2c3d4e5f6g7h8'
  *     responses:
  *       201:
  *         description: Created successfully
@@ -224,6 +224,118 @@ router.get('/manager',
 
 /**
  * @swagger
+ * /api/v1/users/customers:
+ *   get:
+ *     summary: Get all customers (staff only)
+ *     description: Retrieve a list of all customers with optional filtering, pagination, and sorting.
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of users per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term to filter customers by name, email, or phone
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Filter customers by active status
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *         description: Field to sort by
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           default: desc
+ *         description: Sort order, either 'asc' or 'desc'
+ *     responses:
+ *       200:
+ *         description: Get successfully
+ */
+router.get('/customers',
+  apiRateLimiter,
+  requireRoles(RoleEnum.STAFF),
+  validationHandlingMiddleware({ query: USER_VALIDATION.query }),
+  USER_CONTROLLER.getAllCustomersForStaff
+)
+
+/**
+ * @swagger
+ * /api/v1/users/staff:
+ *   get:
+ *     summary: Get all staff users (admin only)
+ *     description: Retrieve staff and manager users with filtering, pagination, and sorting.
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of users per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term to filter users by name, email, or phone
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Filter users by active status
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *         description: Filter users by role (staff or manager)
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *         description: Field to sort by
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           default: desc
+ *         description: Sort order, either 'asc' or 'desc'
+ *     responses:
+ *       200:
+ *         description: Get successfully
+ */
+router.get('/staff',
+  apiRateLimiter,
+  authorizationMiddleware,
+  requireRoles(RoleEnum.ADMIN),
+  validationHandlingMiddleware({ query: USER_VALIDATION.query }),
+  USER_CONTROLLER.getAllStaffForAdmin
+)
+
+/**
+ * @swagger
  * /api/v1/users/me:
  *   put:
  *     summary: Update current user profile
@@ -250,8 +362,8 @@ router.get('/manager',
  *                 example: '0123456789'
  *               avatar:
  *                 type: string
- *                 format: url
- *                 example: 'http://example.com/avatar.jpg'
+ *                 description: Cloudinary public ID obtained from upload image API
+ *                 example: 'uploads/a1b2c3d4e5f6g7h8'
  *               addresses:
  *                 type: array
  *                 items:
@@ -512,8 +624,8 @@ router.get('/:id',
  *                 example: '60d0fe4f5311236168a109ca'
  *               avatar:
  *                 type: string
- *                 format: url
- *                 example: 'http://example.com/avatar.jpg'
+ *                 description: Cloudinary public ID obtained from upload image API
+ *                 example: 'uploads/a1b2c3d4e5f6g7h8'
  *               addresses:
  *                 type: array
  *                 items:

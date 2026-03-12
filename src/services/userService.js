@@ -67,6 +67,43 @@ const getAllUsers = async (query = {}) => {
   }
 }
 
+const getAllStaffForAdmin = async (query = {}) => {
+  const { page, limit, search, isActive, role, sortBy, sortOrder } = query
+  const filter = {}
+
+  if (search) {
+    const escapedSearch = escapeRegex(search)
+    filter.$or = [
+      { fullname: { $regex: escapedSearch, $options: 'i' } },
+      { email: { $regex: escapedSearch, $options: 'i' } },
+      { phone: { $regex: escapedSearch, $options: 'i' } }
+    ]
+  }
+
+  if (typeof isActive === 'boolean') {
+    filter.isActive = isActive
+  }
+
+  if (role && [RoleEnum.STAFF, RoleEnum.MANAGER].includes(role)) {
+    filter.role = role
+  } else {
+    filter.role = { $in: [RoleEnum.STAFF, RoleEnum.MANAGER] }
+  }
+
+  const sort = { [sortBy || 'createdAt']: sortOrder === 'asc' ? 1 : -1 }
+
+  const result = await USER_REPOSITORY.getAllUsers(filter, {
+    page,
+    limit,
+    sort
+  })
+
+  return {
+    data: result.docs,
+    pagination: mapMongoosePagination(result)
+  }
+}
+
 const getUserByEmail = async (email) => {
   const user = await USER_REPOSITORY.getUserByEmail(email)
   if (!user) throw new ApiError(ERROR_CODES.NOT_FOUND, ['Người dùng không tồn tại'])
@@ -108,6 +145,28 @@ const getManagerByBranch = async (branchId) => {
   return manager
 }
 
+const validateBranchExists = async (branchId) => {
+  if (!branchId) return
+  const branchExists = await BRANCH_REPOSITORY.getBranchById(branchId)
+  if (!branchExists) {
+    throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chi nhánh không tồn tại'])
+  }
+}
+
+const ensureManagerBranchAvailable = async (branchId, excludedUserId = null) => {
+  if (!branchId) {
+    throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chi nhánh là bắt buộc'])
+  }
+
+  const existingManager = await getManagerByBranch(branchId)
+  if (
+    existingManager &&
+    existingManager._id.toString() !== excludedUserId?.toString()
+  ) {
+    throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chi nhánh này đã có 1 manager'])
+  }
+}
+
 const createUserInternal = async ({
   fullname,
   email,
@@ -134,6 +193,9 @@ const createUserInternal = async ({
     createdBy,
     isEmailVerified
   }
+  if (isEmailVerified) {
+    newUser.emailVerifiedAt = new Date()
+  }
   const createdUser = await USER_REPOSITORY.createUser(newUser)
 
   if (role === RoleEnum.CUSTOMER) {
@@ -158,27 +220,25 @@ const createUser = async (userData, createdBy = null) => {
     userData.branch = creator.branch
   }
 
+  if ([RoleEnum.STAFF, RoleEnum.MANAGER].includes(role) && !userData.branch) {
+    throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chi nhánh là bắt buộc'])
+  }
+
   if (role === RoleEnum.CUSTOMER) {
     userData.branch = null
   }
 
   const { branch } = userData
-  if (branch) {
-    const branchExists = await BRANCH_REPOSITORY.getBranchById(branch)
-    if (!branchExists) {
-      throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chi nhánh không tồn tại'])
-    }
-  }
+  await validateBranchExists(branch)
 
   if (role === RoleEnum.MANAGER) {
-    const existingManager = await getManagerByBranch(branch)
-    if (existingManager) {
-      throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chi nhánh này đã có 1 manager'])
-    }
+    await ensureManagerBranchAvailable(branch)
   }
 
   return await createUserInternal({
     ...userData,
+    isEmailVerified: true,
+
     createdBy
   })
 }
@@ -275,6 +335,23 @@ const updateUser = async (userId, updateData, updatedBy = null) => {
     }
   }
 
+  const targetRole = updatedUserData.role || user.role
+  const targetBranch = Object.prototype.hasOwnProperty.call(updatedUserData, 'branch')
+    ? updatedUserData.branch
+    : user.branch
+
+  if ([RoleEnum.STAFF, RoleEnum.MANAGER].includes(targetRole) && !targetBranch) {
+    throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Chi nhánh là bắt buộc'])
+  }
+
+  if (targetRole !== RoleEnum.CUSTOMER && targetBranch) {
+    await validateBranchExists(targetBranch)
+  }
+
+  if (targetRole === RoleEnum.MANAGER) {
+    await ensureManagerBranchAvailable(targetBranch, userId)
+  }
+
   return USER_REPOSITORY.updateUserById(userId, updatedUserData)
 }
 
@@ -339,7 +416,77 @@ const getAllUsersForManager = async (managerId, query = {}) => {
   if (manager.role !== RoleEnum.MANAGER) {
     throw new ApiError(ERROR_CODES.FORBIDDEN, ['Người dùng không có quyền truy cập'])
   }
-  const filter = { branch: manager.branch }
+
+  // Base filter: exclude admin accounts
+  const filter = { role: { $ne: RoleEnum.ADMIN } }
+
+  // Handle role-based filtering
+  if (role) {
+    if (role === RoleEnum.ADMIN) {
+      throw new ApiError(ERROR_CODES.FORBIDDEN, ['Không thể truy cập thông tin admin'])
+    } else if (role === RoleEnum.CUSTOMER) {
+      // Customers: no branch filter
+      filter.role = RoleEnum.CUSTOMER
+    } else if ([RoleEnum.STAFF, RoleEnum.MANAGER].includes(role)) {
+      // Staff/Manager: filter by branch
+      filter.role = role
+      filter.branch = manager.branch
+    }
+  } else {
+    // No role filter: return customers + staff/managers from the manager's branch
+    filter.$or = [
+      { role: RoleEnum.CUSTOMER },
+      { role: { $in: [RoleEnum.STAFF, RoleEnum.MANAGER] }, branch: manager.branch }
+    ]
+  }
+
+  if (search) {
+    const escapedSearch = escapeRegex(search)
+    const searchCondition = [
+      { fullname: { $regex: escapedSearch, $options: 'i' } },
+      { email: { $regex: escapedSearch, $options: 'i' } },
+      { phone: { $regex: escapedSearch, $options: 'i' } }
+    ]
+
+    // Combine with existing $or conditions if present
+    if (filter.$or) {
+      filter.$and = [
+        { $or: filter.$or },
+        { $or: searchCondition }
+      ]
+      delete filter.$or
+    } else {
+      filter.$or = searchCondition
+    }
+  }
+
+  if (typeof isActive === 'boolean') {
+    filter.isActive = isActive
+  }
+
+  const sort = { [sortBy || 'createdAt']: sortOrder === 'asc' ? 1 : -1 }
+
+  const result = await USER_REPOSITORY.getAllUsers(filter, {
+    page,
+    limit,
+    sort
+  })
+  return {
+    data: result.docs,
+    pagination: mapMongoosePagination(result)
+  }
+}
+
+const getAllCustomersForStaff = async (staffId, query = {}) => {
+  const staff = await getUserById(staffId)
+  const { page, limit, search, isActive, sortBy, sortOrder } = query
+
+  if (staff.role !== RoleEnum.STAFF) {
+    throw new ApiError(ERROR_CODES.FORBIDDEN, ['Người dùng không có quyền truy cập'])
+  }
+
+  // Staff can only see customers
+  const filter = { role: RoleEnum.CUSTOMER }
 
   if (search) {
     const escapedSearch = escapeRegex(search)
@@ -349,12 +496,11 @@ const getAllUsersForManager = async (managerId, query = {}) => {
       { phone: { $regex: escapedSearch, $options: 'i' } }
     ]
   }
+
   if (typeof isActive === 'boolean') {
     filter.isActive = isActive
   }
-  if (role) {
-    filter.role = role
-  }
+
   const sort = { [sortBy || 'createdAt']: sortOrder === 'asc' ? 1 : -1 }
 
   const result = await USER_REPOSITORY.getAllUsers(filter, {
@@ -362,6 +508,7 @@ const getAllUsersForManager = async (managerId, query = {}) => {
     limit,
     sort
   })
+
   return {
     data: result.docs,
     pagination: mapMongoosePagination(result)
@@ -509,6 +656,7 @@ const confirmPasswordReset = async (data) => {
 export const USER_SERVICE = {
   getUserById,
   getAllUsers,
+  getAllStaffForAdmin,
   getUserByEmail,
   assertEmailNotExists,
   createUserInternal,
@@ -519,6 +667,7 @@ export const USER_SERVICE = {
   updateEmailVerificationStatus,
   updateCurrentUser,
   getAllUsersForManager,
+  getAllCustomersForStaff,
   getManagerByBranch,
   getCurrentUser,
   changePassword,

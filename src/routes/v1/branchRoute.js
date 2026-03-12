@@ -66,21 +66,32 @@ const router = express.Router()
  *       200:
  *         description: Lấy danh sách chi nhánh thành công
  *
+ * /api/v1/branches/all:
+ *   get:
+ *     summary: Lấy tất cả chi nhánh (không phân trang)
+ *     tags: [Branch]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Tìm kiếm theo tên hoặc địa chỉ
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Lọc theo trạng thái hoạt động
+ *     responses:
+ *       200:
+ *         description: Lấy tất cả chi nhánh thành công
+ *
  * /api/v1/branches/managers:
  *   get:
  *     summary: Lấy danh sách quản lý chi nhánh (admin only)
  *     tags: [Branch]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Trang hiện tại
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Số lượng mỗi trang
  *       - in: query
  *         name: search
  *         schema:
@@ -104,6 +115,8 @@ const router = express.Router()
  *   get:
  *     summary: Lấy thông tin chi nhánh theo ID (admin, manager, staff only)
  *     tags: [Branch]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -236,9 +249,6 @@ const router = express.Router()
  *         address:
  *           type: string
  *           example: 123 Đường ABC, Quận 1
- *         manager:
- *           type: string
- *           example: 65f1b2c3d4e5f6a7b8c9d0e1
  *     UpdateBranch:
  *       type: object
  *       properties:
@@ -248,9 +258,6 @@ const router = express.Router()
  *         address:
  *           type: string
  *           example: 456 Đường XYZ, Quận 3
- *         manager:
- *           type: string
- *           example: 65f1b2c3d4e5f6a7b8c9d0e1
  */
 router.post(
   '/',
@@ -270,8 +277,16 @@ router.get(
 )
 
 router.get(
+  '/all',
+  apiRateLimiter,
+  validationHandlingMiddleware({ query: BRANCH_VALIDATION.queryNoPagination }),
+  BRANCH_CONTROLLER.getAllBranchesWithoutPagination
+)
+
+router.get(
   '/managers',
   apiRateLimiter,
+  authorizationMiddleware,
   requireRoles(RoleEnum.ADMIN),
   validationHandlingMiddleware({ query: BRANCH_VALIDATION.getAllManagerForBranch }),
   BRANCH_CONTROLLER.getAllManagerForBranch
@@ -280,6 +295,7 @@ router.get(
 router.get(
   '/:id',
   apiRateLimiter,
+  authorizationMiddleware,
   requireRoles(RoleEnum.ADMIN, RoleEnum.MANAGER, RoleEnum.STAFF),
   validationHandlingMiddleware({ params: BRANCH_VALIDATION.idParam }),
   BRANCH_CONTROLLER.getBranchById
