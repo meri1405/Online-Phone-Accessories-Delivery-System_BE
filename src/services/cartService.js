@@ -4,6 +4,7 @@ import { ERROR_CODES } from '#constants/errorCode.js'
 import { PRODUCT_SERVICE } from '#services/productService.js'
 import { SERVICE_ITEM_SERVICE } from '#services/serviceItemService.js'
 import { STORE_INVENTORY_SERVICE } from '#services/storeInventoryService.js'
+import { INVENTORY_SERVICE } from '#services/inventoryService.js'
 import mongoose from 'mongoose'
 
 const calculateTotalPrice = (items) => {
@@ -108,18 +109,23 @@ const checkStockAvailability = async (productId, quantity) => {
   const inventories =
     await STORE_INVENTORY_SERVICE.getStoreInventoriesByProduct(productId)
 
-  if (inventories.length === 0) {
-    throw new ApiError(ERROR_CODES.BAD_REQUEST, [
-      'Sản phẩm hiện không có trong kho'
-    ])
-  }
-
   for (const inventory of inventories) {
     if (inventory.quantity >= quantity) return true
   }
 
+  try {
+    const mainInventory = await INVENTORY_SERVICE.getInventoryByProductId(productId)
+    if (mainInventory.quantity >= quantity) {
+      return true
+    }
+  } catch (error) {
+    if (error?.code !== ERROR_CODES.NOT_FOUND.code) {
+      throw error
+    }
+  }
+
   throw new ApiError(ERROR_CODES.BAD_REQUEST, [
-    'Không đủ tồn kho tại chi nhánh'
+    'Không đủ số lượng trong hệ thống'
   ])
 }
 
@@ -162,6 +168,15 @@ const getCart = async (userId) => {
     items: mappedItems,
     totalPrice: calculateTotalPrice(mappedItems)
   }
+}
+
+const createCart = async (userId) => {
+  return CART_REPOSITORY.createCart(userId)
+}
+
+const getOrCreateCart = async (userId) => {
+  const cart = await CART_REPOSITORY.getOrCreateCart(userId)
+  return CART_REPOSITORY.getCartByUserId(cart.user, { populate: true })
 }
 
 const addToCart = async (userId, data) => {
@@ -411,6 +426,8 @@ const validateCartBeforeCheckout = async (userId) => {
 
 export const CART_SERVICE = {
   getCart,
+  createCart,
+  getOrCreateCart,
   addToCart,
   updateCartItemQuantity,
   updateCartItemServices,
