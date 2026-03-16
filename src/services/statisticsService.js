@@ -124,7 +124,7 @@ const getDashboardOverview = async (branchId = null, period = 'this_month', cust
   const totalConfirmed = stats.confirmedOrders + stats.shippedOrders + stats.deliveredOrders
   const completionRate = stats.totalOrders > 0 ? Math.round((totalConfirmed / stats.totalOrders) * 100) : 0
 
-  // Count active transactions (non-pending, non-canceled)
+  // Count active transactions (non-pending, non-cancelled)
   const activeTransactions = totalConfirmed
 
   return {
@@ -135,11 +135,17 @@ const getDashboardOverview = async (branchId = null, period = 'this_month', cust
       totalRevenue: Math.round(stats.totalRevenue),
       totalProductsSold: productsSold[0]?.totalQuantity || 0,
       totalCustomers: newCustomers,
-      averageOrderValue: Math.round(stats.averageOrderValue || 0)
+      averageOrderValue: Math.round(stats.averageOrderValue || 0),
+      pendingProcessing: stats.confirmedOrders,
+      confirmedOrders: stats.confirmedOrders,
+      shippedOrders: stats.shippedOrders,
+      deliveredOrders: stats.deliveredOrders,
+      cancelledOrders: stats.canceledOrders
     },
     orders: {
       total: stats.totalOrders,
       pending: stats.pendingOrders,
+      pendingProcessing: stats.confirmedOrders,
       confirmed: stats.confirmedOrders,
       shipped: stats.shippedOrders,
       delivered: stats.deliveredOrders,
@@ -321,7 +327,7 @@ const getBranchStatistics = async (period = 'this_month', customStart = null, cu
       orders: {
         total: stats.totalOrders,
         delivered: stats.deliveredOrders,
-        canceled: stats.canceledOrders
+        cancelled: stats.canceledOrders
       },
       revenue: Math.round(stats.totalRevenue),
       inventory: {
