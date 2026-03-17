@@ -60,23 +60,6 @@ const mapOrderProductImages = (order) => {
 }
 
 /**
- * Map Cloudinary images for all products in an order's items.
- * Without this, item.product.images is a raw string[] of publicIds with no URLs.
- */
-const mapOrderProductImages = (order) => {
-  if (!order) return order
-  const orderObj = order.toObject ? order.toObject() : order
-  const mappedItems = (orderObj.items || []).map((item) => {
-    if (item.product && typeof item.product === 'object') {
-      const mappedProduct = PRODUCT_SERVICE.mapProductImages(item.product)
-      return { ...item, product: mappedProduct }
-    }
-    return item
-  })
-  return { ...orderObj, items: mappedItems }
-}
-
-/**
  * Generate unique order number
  */
 const generateOrderNumber = () => {
@@ -276,13 +259,6 @@ const canFulfillFromMainInventory = async (items) => {
     if (!mainInventory || mainInventory.quantity < item.quantity) {
       return false
     }
-
-    if (eligible === null) return new Set(branchesWithEnough)
-    return new Set(branchesWithEnough.filter(id => eligible.has(id)))
-  }, null)
-
-  if (!eligibleBranchIds || eligibleBranchIds.size === 0) {
-    throw new ApiError(ERROR_CODES.BAD_REQUEST, ['Không có chi nhánh nào có đủ tồn kho cho tất cả sản phẩm trong đơn hàng'])
   }
 
   return true
@@ -1025,6 +1001,8 @@ const createOfflineOrder = async (staffId, orderData) => {
 
   // Generate order number
   const orderNumber = generateOrderNumber()
+  const isCounterPickup = !hasDelivery
+  const deliveredAt = isCounterPickup ? new Date() : null
 
   // Determine the user for the order (customer or staff if no customer)
   const orderUserId = customerId || staffId
@@ -1036,18 +1014,17 @@ const createOfflineOrder = async (staffId, orderData) => {
     user: orderUserId,
     items: populatedItems,
     shippingAddress: hasDelivery && shippingAddress ? shippingAddress : null,
-    orderStatus: ORDER_STATUS.CONFIRMED, // Offline orders are confirmed immediately
+    orderStatus: isCounterPickup ? ORDER_STATUS.DELIVERED : ORDER_STATUS.CONFIRMED,
     subtotal,
     shippingFee,
     totalAmount,
     pricingApplied,
     paymentMethod,
-    delivery: hasDelivery
-      ? {
-        status: DELIVERY_STATUS.PENDING,
-        recipientName: shippingAddress?.fullname || ''
-      }
-      : null,
+    delivery: {
+      status: isCounterPickup ? DELIVERY_STATUS.DELIVERED : DELIVERY_STATUS.PENDING,
+      deliveredAt,
+      recipientName: shippingAddress?.fullname || ''
+    },
     message,
     branch: branchId,
     createdBy: staffId
