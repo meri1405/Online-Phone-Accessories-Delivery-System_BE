@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { orderModel } from '#models/orderModel.js'
 import { paymentModel } from '#models/paymentModel.js'
 import { productModel } from '#models/productModel.js'
@@ -14,7 +15,7 @@ import { RoleEnum } from '#constants/roleConstant.js'
 const buildMatchStage = (branchId, startDate, endDate, additionalFilters = {}) => {
   const matchStage = { ...additionalFilters }
   if (branchId) {
-    matchStage.branch = branchId
+    matchStage.branch = mongoose.isValidObjectId(branchId) ? new mongoose.Types.ObjectId(branchId) : branchId
   }
   if (startDate && endDate) {
     matchStage.createdAt = { $gte: startDate, $lte: endDate }
@@ -56,7 +57,7 @@ const getOrderOverviewStats = async (matchStage) => {
           $sum: { $cond: [{ $eq: ['$orderStatus', ORDER_STATUS.DELIVERED] }, 1, 0] }
         },
         canceledOrders: {
-          $sum: { $cond: [{ $eq: ['$orderStatus', ORDER_STATUS.CANCELED] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ['$orderStatus', ORDER_STATUS.CANCELLED] }, 1, 0] }
         },
         averageOrderValue: { $avg: '$totalAmount' }
       }
@@ -334,7 +335,7 @@ const getNewCustomersCount = async (startDate, endDate) => {
  * Get top customers by order value
  */
 const getTopCustomers = async (matchStage, limit = 10) => {
-  const customerMatchStage = { ...matchStage, orderStatus: { $ne: ORDER_STATUS.CANCELED } }
+  const customerMatchStage = { ...matchStage, orderStatus: { $ne: ORDER_STATUS.CANCELLED } }
   return await orderModel.aggregate([
     { $match: customerMatchStage },
     {
@@ -504,7 +505,7 @@ const getBranchOrderStats = async (branchId, startDate, endDate) => {
           $sum: { $cond: [{ $eq: ['$orderStatus', ORDER_STATUS.DELIVERED] }, 1, 0] }
         },
         canceledOrders: {
-          $sum: { $cond: [{ $eq: ['$orderStatus', ORDER_STATUS.CANCELED] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ['$orderStatus', ORDER_STATUS.CANCELLED] }, 1, 0] }
         }
       }
     }
