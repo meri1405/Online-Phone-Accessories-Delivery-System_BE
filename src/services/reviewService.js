@@ -66,10 +66,27 @@ const mapReviewImages = (imagePublicIds = []) => {
   }))
 }
 
+const mapProductImagesToUrls = (product = null) => {
+  if (!product) return product
+
+  const productObj = product.toObject ? product.toObject() : { ...product }
+  if (!Array.isArray(productObj.images) || productObj.images.length === 0) {
+    productObj.images = []
+    return productObj
+  }
+
+  productObj.images = productObj.images
+    .map((publicId) => UPLOAD_SERVICE.buildImageUrl(publicId))
+    .filter(Boolean)
+
+  return productObj
+}
+
 const mapReviewWithImages = (review) => {
   if (!review) return review
   const reviewObj = review.toObject ? review.toObject() : { ...review }
   reviewObj.images = mapReviewImages(reviewObj.images)
+  reviewObj.product = mapProductImagesToUrls(reviewObj.product)
   return reviewObj
 }
 
@@ -139,12 +156,22 @@ const getReviewsByProduct = async (productId, query = {}) => {
 }
 
 const getMyReviews = async (userId, query = {}) => {
-  const { page, limit } = query
+  const { page, limit, rating, productId, sortBy, sortOrder } = query
 
-  const result = await REVIEW_REPOSITORY.getReviewsByUser(userId, {}, {
+  const filter = {}
+  if (rating) {
+    filter.rating = rating
+  }
+  if (productId) {
+    filter.product = productId
+  }
+
+  const sort = { [sortBy || 'createdAt']: sortOrder === 'asc' ? 1 : -1 }
+
+  const result = await REVIEW_REPOSITORY.getReviewsByUser(userId, filter, {
     page,
     limit,
-    sort: { createdAt: -1 }
+    sort
   })
 
   return {
